@@ -11,7 +11,7 @@ pipeline {
   }
 
   stages {
-    stage('Maven Stage') 
+    stage('Maven Stage') {
 	  agent {
         docker {
 	      image 'maven'
@@ -25,7 +25,18 @@ pipeline {
           }
 		}
       }
+	 }
     
-    
+    stage('Docker Build') {
+      steps {
+        script {
+          sh 'docker build . -t m1048858\mycalc:Docker_tag'
+		  withCredentials([string(credentialsId: 'docker_hub', variable: 'docker_hub_credential')]) {
+		    sh 'docker login -u m1048858 -p $docker_hub'
+			sh 'docker push m1048858\mycalc:Docker_tag'
+		  }
+        }
+      }
+    }
   }
 }
