@@ -1,45 +1,33 @@
-def getDockerTag(){
-	def tag = sh script: 'git rev-parse HEAD' , returnStdout:true
-	return tag
-}
-
-pipeline {
-  
-  environment {
-    Docker_tag = getDockerTag()
-	JAVA_TOOL_OPTIONS = '-Duser.home=/var/maven'
-  }
-  
-  agent {
-       docker {
-	      image 'maven'
-	      args '-v /tmp/maven:/var/maven/.m2 -e MAVEN_CONFIG=/var/maven/.m2'
-	    }
-      }
-
-  stages {
-    stage('Maven Stage') {
-      steps {
-	        sh 'mvn --version'
-            sh 'mvn clean install'
-		}
-	 }
-    
-    stage('Docker Build') {
-      steps {
-        script {
-          sh 'docker build . -t m1048858/mycalc:Docker_tag'
-		  withCredentials([string(credentialsId: 'docker_hub', variable: 'docker_hub_credential')]) {
-		    sh 'docker login -u m1048858 -p $docker_hub'
-			sh 'docker push m1048858/mycalc:Docker_tag'
-		  }
-        }
-      }
+node {
+    stage('Scm checkout') {
+        git branch: 'main', credentialsId: 'GitHubUserNameCredentials', url: 'https://github.com/amitsinha2/mycalc.git'
     }
-  }
-  post {
-	  always {
-	    cleanWs()
-	  }
+    stage('Maven Package') {
+	    def mvnHome = tool name: 'localMaven', type: 'maven'
+		def mvnCMD = "${mvnHome}/bin/mvn"
+	    sh "${mvnCMD} clean package"
+	}
+	stage('Build Docker Image') {
+	   sh "docker build -t m1048858/mycalc:${BUILD_NUMBER} ."
+	}
+	stage('Push Docker Image') {
+	   withCredentials([string(credentialsId: 'docker_hub', variable: 'docker_hub_pwd')]) {
+		    sh "docker login -u m1048858 -p ${docker_hub_pwd}"
+			sh "docker push m1048858/mycalc:${BUILD_NUMBER}"
+		  }
+	}
+	stage('Run Container on Dev Server - Docker pull Image') {
+	try {
+	   def processId = sh returnStdout: true, script: 'docker ps -aq'
+	   sh "echo ${processId}"
+	   if(processId != null) {
+	    sh "docker stop my-calc-app"
+	    sh "docker rm my-calc-app"
+	   }
+	 } catch (Exception ex) {
+		println("Unable to remove container: ${ex}")
+	   }
+	   sh "echo ${BUILD_NUMBER}"
+	   sh "docker run -p 8083:8083 -d --name my-calc-app m1048858/mycalc:${BUILD_NUMBER}"
 	}
 }
