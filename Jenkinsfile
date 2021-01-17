@@ -13,7 +13,6 @@ pipeline {
   agent {
        docker {
 	      image 'maven'
-		  label 'localDocker'
 	      args '-v /tmp/maven:/var/maven/.m2 -e MAVEN_CONFIG=/var/maven/.m2'
 	    }
       }
