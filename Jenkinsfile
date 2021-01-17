@@ -7,14 +7,14 @@ pipeline {
   
   environment {
     Docker_tag = getDockerTag()
-	JAVA_TOOL_OPTIONS = "-Duser.home=/var/maven"
+	JAVA_TOOL_OPTIONS = '-Duser.home=/var/maven'
   }
   
   agent {
        docker {
 	      image 'maven'
-		  label "docker"
-	      args '-v /tmp/maven:/var/maven/.m2 -e MAVEN_CONFIG=/var/maven/.m2"
+		  label 'docker'
+	      args '-v /tmp/maven:/var/maven/.m2 -e MAVEN_CONFIG=/var/maven/.m2'
 	    }
       }
 
